@@ -5,6 +5,24 @@
 @inject IJSRuntime JS
 
 <div class="main">
+    <!-- Botón para activar el modo brillante -->
+    <button @onclick="ToggleTheme" class="btn btn-primary toggle-theme-btn">
+        Modo Brillante
+    </button>
+
+    <!-- Botón para mostrar el mensaje de bienvenida -->
+    <button @onclick="ShowWelcomeMessage" class="btn btn-info toggle-welcome-btn">
+        Mostrar Mensaje de Bienvenida
+    </button>
+
+    <!-- Mensaje de bienvenida -->
+    @if (showWelcomeMessage)
+    {
+        <div class="alert alert-success">
+            ¡Bienvenido a nuestra Pizzería! <button @onclick="HideWelcomeMessage" class="btn-close"></button>
+        </div>
+    }
+
     <ul class="pizza-cards">
         @if (specials is not null)
         {
@@ -26,7 +44,7 @@
     @if (Order.Pizzas.Any())
     {
         <div class="order-contents">
-            <h2>Your order</h2>
+            <h2>Tu Pedido</h2>
 
             @foreach (var configuredPizza in Order.Pizzas)
             {
@@ -36,7 +54,7 @@
     }
     else
     {
-        <div class="empty-cart">Choose a pizza<br>to get started</div>
+        <div class="empty-cart">Elige tu pizza<br>para comenzar!</div>
     }
 
     <div class="order-total @(Order.Pizzas.Any() ? "" : "hidden")">
@@ -49,19 +67,50 @@
 </div>
 
 <TemplatedDialog Show="OrderState.ShowingConfigureDialog">
-    <ConfigurePizzaDialog
-        Pizza="OrderState.ConfiguringPizza"
-        OnCancel="OrderState.CancelConfigurePizzaDialog"
-        OnConfirm="OrderState.ConfirmConfigurePizzaDialog" />
+    <ConfigurePizzaDialog Pizza="OrderState.ConfiguringPizza"
+                          OnCancel="OrderState.CancelConfigurePizzaDialog"
+                          OnConfirm="OrderState.ConfirmConfigurePizzaDialog" />
 </TemplatedDialog>
 
 @code {
     List<PizzaSpecial>? specials;
     Order Order => OrderState.Order;
+    private bool isBrightMode = false;
+    private bool showWelcomeMessage = false; // Estado para mostrar el mensaje de bienvenida
 
     protected override async Task OnInitializedAsync()
     {
         specials = await HttpClient.GetFromJsonAsync<List<PizzaSpecial>>("specials");
+    }
+
+    // Método para cambiar el tema (modo brillante)
+    private async Task ToggleTheme()
+    {
+        isBrightMode = !isBrightMode;
+        if (isBrightMode)
+        {
+            // Aplicamos el tema brillante
+            await ChangeTheme("bright-theme");
+        }
+        else
+        {
+            // Restauramos el tema predeterminado
+            await ChangeTheme("default-theme");
+        }
+    }
+
+    // Cambiar la clase del body para aplicar el tema
+    private async Task ChangeTheme(string theme)
+    {
+        try
+        {
+            // Usamos JS.InvokeAsync para ejecutar JavaScript en el navegador
+            await JS.InvokeVoidAsync("changeTheme", theme);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error al cambiar el tema: {ex.Message}");
+        }
     }
 
     async Task RemovePizza(Pizza configuredPizza)
@@ -70,5 +119,17 @@
         {
             OrderState.RemoveConfiguredPizza(configuredPizza);
         }
+    }
+
+    // Método para mostrar el mensaje de bienvenida
+    private void ShowWelcomeMessage()
+    {
+        showWelcomeMessage = true;
+    }
+
+    // Método para ocultar el mensaje de bienvenida
+    private void HideWelcomeMessage()
+    {
+        showWelcomeMessage = false;
     }
 }
